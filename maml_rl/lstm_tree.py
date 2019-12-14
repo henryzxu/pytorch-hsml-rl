@@ -34,7 +34,7 @@ class TreeLSTM(nn.Module):
             self.no_leaf_weight_u.append(
                 torch.randn((tree_hidden_dim, tree_hidden_dim), requires_grad=True, device=device))
 
-            self.no_leaf_bias_i.append(torch.randn((1, 1), requires_grad=True).cuda())
+            self.no_leaf_bias_i.append(torch.randn((1, 1), requires_grad=True, device=device))
             self.no_leaf_bias_u.append(torch.randn((1, tree_hidden_dim), requires_grad=True, device=device))
 
         self.root_weight_u = torch.randn((tree_hidden_dim, tree_hidden_dim), requires_grad=True, device=device)
@@ -100,3 +100,7 @@ class TreeLSTM(nn.Module):
 if __name__=="__main__":
     k = TreeLSTM(4, 2, 3, 3)
     print(k.forward(torch.tensor([1., 2.])))
+    # [-2.0737,  0.4270,  1.6740, -2.9784]
+    # tree = torch.load("../test/tree.pkl")
+    # tree.eval()
+    # print(tree.forward(torch.tensor([1., 2.])))

@@ -105,6 +105,9 @@ def main(args):
                 'policy-{0}.pt'.format(batch)), 'wb') as f:
             torch.save(policy.state_dict(), f)
 
+        # Save tree
+        torch.save(tree, os.path.join(save_folder, 'tree-{0}.pt'.format(batch)))
+
 
 if __name__ == '__main__':
     import argparse

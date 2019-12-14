@@ -80,7 +80,10 @@ def main(args):
         # tasks = sampler.sample_tasks(num_tasks=args.meta_batch_size)
         with open('./logs/{0}/task_list.pkl'.format(args.output_folder), 'wb') as pf:
             pickle.dump(all_tasks, pf)
+
+        print("collecting data...".format(batch))
         episodes = metalearner.sample(tasks, first_order=args.first_order)
+        print("training...".format(batch))
         metalearner.step(episodes, max_kl=args.max_kl, cg_iters=args.cg_iters,
             cg_damping=args.cg_damping, ls_max_steps=args.ls_max_steps,
             ls_backtrack_ratio=args.ls_backtrack_ratio)

@@ -11,14 +11,10 @@ def weight_init(module):
 class TreeLSTM(nn.Module):
     def __init__(self, tree_hidden_dim, input_dim, cluster_layer_0, cluster_layer_1, device=torch.device('cpu')):
         super(TreeLSTM, self).__init__()
-        self.input_dim = input_dim
-        self.tree_hidden_dim = tree_hidden_dim
         self.leaf_i, self.leaf_o, self.leaf_u = [], [], []
 
-        self.cluster_layer_0 = cluster_layer_0
-        self.cluster_layer_1 = cluster_layer_1
 
-        for i in range(self.cluster_layer_0):
+        for i in range(cluster_layer_0):
             # w = torch.randn((input_dim, tree_hidden_dim), requires_grad=True, device=device)
             # self.leaf_weight_u.append(w)
             # w = torch.randn((1, tree_hidden_dim), requires_grad=True, device=device)
@@ -29,7 +25,7 @@ class TreeLSTM(nn.Module):
         self.leaf_u.apply(weight_init)
 
         self.no_leaf_i, self.no_leaf_o, self.no_leaf_u, self.no_leaf_f = [], [], [], []
-        for i in range(self.cluster_layer_1):
+        for i in range(cluster_layer_1):
             # if True:
             #     self.no_leaf_weight_i.append(
             #         torch.randn((tree_hidden_dim, 1), requires_grad=True, device=device))
@@ -61,7 +57,7 @@ class TreeLSTM(nn.Module):
 
 
         cluster_centers = []
-        for i in range(self.cluster_layer_0):
+        for i in range(cluster_layer_0):
             w = torch.empty(1, input_dim)
             nn.init.xavier_uniform_(w)
             cluster_centers.append(nn.Parameter(w))
@@ -73,7 +69,7 @@ class TreeLSTM(nn.Module):
 
         sigma = 5
 
-        for idx in range(self.cluster_layer_0):
+        for idx in range(len(self.cluster_center)):
             x = inputs - self.cluster_center[idx]
             if idx == 0:
                 all_value = torch.exp(-torch.sum(torch.mul(x, x)) / (2.0*sigma))
@@ -81,7 +77,7 @@ class TreeLSTM(nn.Module):
                 all_value += torch.exp(-torch.sum(torch.mul(x, x)) / (2.0*sigma))
 
         c_leaf = []
-        for idx in range(self.cluster_layer_0):
+        for idx in range(len(self.cluster_center)):
             x = inputs - self.cluster_center[idx]
             assignment_idx = torch.exp(-torch.sum(torch.mul(x, x)) / (2.0*sigma)) / all_value
             value_u = torch.tanh(self.leaf_u[idx](inputs))
@@ -90,9 +86,9 @@ class TreeLSTM(nn.Module):
             c_leaf.append(value_c)
         # print(c_leaf)
         c_no_leaf = []
-        for idx in range(self.cluster_layer_0):
+        for idx in range(len(self.cluster_center)):
             input_gate = []
-            for idx_layer_1 in range(self.cluster_layer_1):
+            for idx_layer_1 in range(len(self.no_leaf_i)):
                 if True:
                     input_gate.append(
                         self.no_leaf_i[idx_layer_1](c_leaf[idx]))
@@ -104,7 +100,7 @@ class TreeLSTM(nn.Module):
             # print(input_gate)
             input_gate = torch.nn.functional.softmax(torch.cat(input_gate, 0), dim=0)
             c_no_leaf_temp = []
-            for idx_layer_1 in range(self.cluster_layer_1):
+            for idx_layer_1 in range(len(self.no_leaf_i)):
                 no_leaf_value_u = torch.tanh(self.no_leaf_u[idx_layer_1](c_leaf[idx]))
                 c_no_leaf_temp.append(input_gate[idx_layer_1] * no_leaf_value_u)
             c_no_leaf.append(torch.cat(c_no_leaf_temp, 0))
@@ -117,7 +113,7 @@ class TreeLSTM(nn.Module):
 
         root_c = []
 
-        for idx in range(self.cluster_layer_1):
+        for idx in range(len(self.no_leaf_i)):
             root_c.append(torch.tanh(self.root_leaf_u(c_no_leaf[idx])))
 
         root_c = torch.sum(torch.cat(root_c, 0), dim=0, keepdim=True)

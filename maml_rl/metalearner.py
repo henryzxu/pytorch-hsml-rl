@@ -39,6 +39,12 @@ class MetaLearner(object):
         self.tau = tau
         self.to(device)
 
+    def get_all_params(self):
+        return list(self.policy.parameters()) + list(self.tree.parameters())
+
+    def get_all_named_params(self):
+        return list(self.policy.named_parameters()) + list(self.tree.named_parameters())
+
     def inner_loss(self, episodes, params=None):
         """Compute the inner loss for the one-step gradient update. The inner 
         loss is REINFORCE with baseline [2], computed on advantages estimated 
@@ -112,12 +118,12 @@ class MetaLearner(object):
         """Hessian-vector product, based on the Perlmutter method."""
         def _product(vector):
             kl = self.kl_divergence(episodes)
-            grads = torch.autograd.grad(kl, self.policy.parameters(),
+            grads = torch.autograd.grad(kl, self.get_all_params(),
                 create_graph=True)
             flat_grad_kl = parameters_to_vector(grads)
 
             grad_kl_v = torch.dot(flat_grad_kl, vector)
-            grad2s = torch.autograd.grad(grad_kl_v, self.policy.parameters())
+            grad2s = torch.autograd.grad(grad_kl_v, self.get_all_params())
             flat_grad2_kl = parameters_to_vector(grad2s)
 
             return flat_grad2_kl + damping * vector
@@ -204,7 +210,7 @@ class MetaLearner(object):
         #     episodes = updated_episodes
 
         old_loss, _, old_pis = self.surrogate_loss(episodes)
-        grads = torch.autograd.grad(old_loss, self.policy.parameters())
+        grads = torch.autograd.grad(old_loss, self.get_all_params())
         grads = parameters_to_vector(grads)
 
         # Compute the step direction with Conjugate Gradient
@@ -220,20 +226,20 @@ class MetaLearner(object):
         step = stepdir / lagrange_multiplier
 
         # Save the old parameters
-        old_params = parameters_to_vector(self.policy.parameters())
+        old_params = parameters_to_vector(self.get_all_params())
 
         # Line search
         step_size = 1.0
         for _ in range(ls_max_steps):
             vector_to_parameters(old_params - step_size * step,
-                                 self.policy.parameters())
+                                 self.get_all_params())
             loss, kl, _ = self.surrogate_loss(episodes, old_pis=old_pis)
             improve = loss - old_loss
             if (improve.item() < 0.0) and (kl.item() < max_kl):
                 break
             step_size *= ls_backtrack_ratio
         else:
-            vector_to_parameters(old_params, self.policy.parameters())
+            vector_to_parameters(old_params, self.get_all_params())
 
         print("loss:", loss)
 

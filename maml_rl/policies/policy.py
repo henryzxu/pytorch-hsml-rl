@@ -21,7 +21,7 @@ class Policy(nn.Module):
         """
         print(self.parameters())
         grads = torch.autograd.grad(loss, self.parameters(),
-            create_graph=not first_order)
+            create_graph=not first_order, allow_unused=True)
         updated_params = OrderedDict()
         for (name, param), grad in zip(self.named_parameters(), grads):
             updated_params[name] = param - step_size * grad

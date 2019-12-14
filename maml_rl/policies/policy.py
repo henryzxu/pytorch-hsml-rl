@@ -19,11 +19,12 @@ class Policy(nn.Module):
         step-size `step_size`, and returns the updated parameters of the neural 
         network.
         """
-        print(self.parameters())
+        print(list(self.parameters()))
         grads = torch.autograd.grad(loss, self.parameters(),
             create_graph=not first_order, allow_unused=True)
         updated_params = OrderedDict()
         for (name, param), grad in zip(self.named_parameters(), grads):
-            updated_params[name] = param - step_size * grad
+            if grad is not None:
+                updated_params[name] = param - step_size * grad
 
         return updated_params

@@ -106,7 +106,10 @@ def main(args):
             torch.save(policy.state_dict(), f)
 
         # Save tree
-        torch.save(tree, os.path.join(save_folder, 'tree-{0}.pt'.format(batch)))
+        # torch.save(tree, os.path.join(save_folder, 'tree-{0}.pt'.format(batch)))
+        with open(os.path.join(save_folder,
+                'tree-{0}.pt'.format(batch)), 'wb') as f:
+            torch.save(tree.state_dict(), f)
 
 
 if __name__ == '__main__':

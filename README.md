@@ -1,3 +1,7 @@
+# Reinforcement Learning with Hierarchically Structured Meta-Learning (HSML)
+
+Implementation in PyTorch for RL environments. 
+
 # Reinforcement Learning with Model-Agnostic Meta-Learning (MAML)
 
 ![HalfCheetahDir](https://raw.githubusercontent.com/tristandeleu/pytorch-maml-rl/master/_assets/halfcheetahdir.gif)

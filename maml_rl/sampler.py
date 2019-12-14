@@ -35,19 +35,19 @@ class BatchSampler(object):
                 input = torch.from_numpy(observations).to(device=device)
 
                 if self.env_name == 'AntPos-v0':
-                    _, embedding = tree.forward(torch.from_numpy(task["position"]))
+                    _, embedding = tree.forward(torch.from_numpy(task["position"]).to(device=device))
                 if self.env_name == 'AntVel-v1':
-                    _, embedding = tree.forward(torch.from_numpy(np.array([task["velocity"]])))
+                    _, embedding = tree.forward(torch.from_numpy(np.array([task["velocity"]])).to(device=device))
 
                 # print(input.shape)
                 # print(embedding.shape)
                 observations_tensor = torch.t(
-                    torch.stack([torch.cat([torch.from_numpy(np.array(teo)), embedding[0]], 0) for teo in input], 1))
+                    torch.stack([torch.cat([torch.from_numpy(np.array(teo)).to(device=device), embedding[0]], 0) for teo in input], 1))
 
                 actions_tensor = policy(observations_tensor, task=task, params=params, enhanced=False).sample()
                 actions = actions_tensor.cpu().numpy()
             new_observations, rewards, dones, new_batch_ids, _ = self.envs.step(actions)
-            episodes.append(observations_tensor.numpy(), actions, rewards, batch_ids)
+            episodes.append(observations_tensor.cpu().numpy(), actions, rewards, batch_ids)
             observations, batch_ids = new_observations, new_batch_ids
         return episodes
 

@@ -6,7 +6,7 @@ from torch.autograd import Variable
 
 
 class TreeLSTM(nn.Module):
-    def __init__(self, tree_hidden_dim, input_dim, cluster_layer_0, cluster_layer_1):
+    def __init__(self, tree_hidden_dim, input_dim, cluster_layer_0, cluster_layer_1, device=torch.device('cpu')):
         super(TreeLSTM, self).__init__()
         self.input_dim = input_dim
         self.tree_hidden_dim = tree_hidden_dim
@@ -17,9 +17,9 @@ class TreeLSTM(nn.Module):
         self.cluster_layer_1 = cluster_layer_1
 
         for i in range(self.cluster_layer_0):
-            w = torch.randn((input_dim, tree_hidden_dim), requires_grad=True)
+            w = torch.randn((input_dim, tree_hidden_dim), requires_grad=True, device=device)
             self.leaf_weight_u.append(w)
-            w = torch.randn((1, tree_hidden_dim), requires_grad=True)
+            w = torch.randn((1, tree_hidden_dim), requires_grad=True, device=device)
             self.leaf_bias_u.append(w)
 
         self.no_leaf_weight_i, self.no_leaf_weight_o, self.no_leaf_weight_u, self.no_leaf_weight_f = [], [], [], []
@@ -27,23 +27,23 @@ class TreeLSTM(nn.Module):
         for i in range(self.cluster_layer_1):
             if True:
                 self.no_leaf_weight_i.append(
-                    torch.randn((tree_hidden_dim, 1), requires_grad=True))
+                    torch.randn((tree_hidden_dim, 1), requires_grad=True, device=device))
             # elif FLAGS.tree_type==2:
             #     self.no_leaf_weight_i.append(
             #         tf.get_variable(name='{}_no_leaf_weight_i'.format(i), shape=(1, tree_hidden_dim)))
             self.no_leaf_weight_u.append(
-                torch.randn((tree_hidden_dim, tree_hidden_dim), requires_grad=True))
+                torch.randn((tree_hidden_dim, tree_hidden_dim), requires_grad=True, device=device))
 
-            self.no_leaf_bias_i.append(torch.randn((1, 1), requires_grad=True))
-            self.no_leaf_bias_u.append(torch.randn((1, tree_hidden_dim), requires_grad=True))
+            self.no_leaf_bias_i.append(torch.randn((1, 1), requires_grad=True).cuda())
+            self.no_leaf_bias_u.append(torch.randn((1, tree_hidden_dim), requires_grad=True, device=device))
 
-        self.root_weight_u = torch.randn((tree_hidden_dim, tree_hidden_dim), requires_grad=True)
+        self.root_weight_u = torch.randn((tree_hidden_dim, tree_hidden_dim), requires_grad=True, device=device)
 
-        self.root_bias_u = torch.randn((1, tree_hidden_dim), requires_grad=True)
+        self.root_bias_u = torch.randn((1, tree_hidden_dim), requires_grad=True, device=device)
 
         self.cluster_center = []
         for i in range(self.cluster_layer_0):
-            self.cluster_center.append(torch.randn((1, input_dim), requires_grad=True))
+            self.cluster_center.append(torch.randn((1, input_dim), requires_grad=True, device=device))
 
     def forward(self, inputs):
 

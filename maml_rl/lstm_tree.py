@@ -24,7 +24,7 @@ class TreeLSTM(nn.Module):
         self.leaf_u = nn.ModuleList(self.leaf_u)
         self.leaf_u.apply(weight_init)
 
-        self.no_leaf_i, self.no_leaf_o, self.no_leaf_u, self.no_leaf_f = [], [], [], []
+        self.no_leaf_i, self.no_leaf_u, = [], []
         for i in range(cluster_layer_1):
             # if True:
             #     self.no_leaf_weight_i.append(

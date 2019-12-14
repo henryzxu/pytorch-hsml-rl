@@ -37,7 +37,6 @@ class MetaLearner(object):
         self.gamma = gamma
         self.fast_lr = fast_lr
         self.tau = tau
-        self.tasks = []
         self.to(device)
 
     def inner_loss(self, episodes, params=None):
@@ -76,7 +75,6 @@ class MetaLearner(object):
         """Sample trajectories (before and after the update of the parameters) 
         for all the tasks `tasks`.
         """
-        self.tasks = [[t["velocity"]] for t in tasks]
         episodes = []
         for task in tasks:
             self.sampler.reset_task(task)

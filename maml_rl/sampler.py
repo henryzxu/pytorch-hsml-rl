@@ -33,7 +33,12 @@ class BatchSampler(object):
         while (not all(dones)) or (not self.queue.empty()):
             with torch.no_grad():
                 input = torch.from_numpy(observations).to(device=device)
-                _, embedding = tree.forward(torch.from_numpy(np.array([task["velocity"]])))
+
+                if self.env_name == 'AntPos-v0':
+                    _, embedding = tree.forward(torch.from_numpy(task["position"]))
+                if self.env_name == 'AntVel-v1':
+                    _, embedding = tree.forward(torch.from_numpy(np.array([task["velocity"]])))
+
                 # print(input.shape)
                 # print(embedding.shape)
                 observations_tensor = torch.t(

@@ -40,13 +40,7 @@ class NormalMLPPolicy(Policy):
         if params is None:
             params = OrderedDict(self.named_parameters())
 
-        if False:
-            _, embedding = self.tree.forward(torch.from_numpy(np.array([task["velocity"]])))
-            # print(input.shape)
-            # print(embedding.shape)
-            output = torch.t(torch.stack([torch.cat([torch.from_numpy(np.array(teo)), embedding[0]], 0) for teo in input], 1))
-        else:
-            output = input
+        output = input
         # print(output.shape)
         for i in range(1, self.num_layers):
             output = F.linear(output,

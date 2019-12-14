@@ -42,20 +42,24 @@ def main(args):
     if args.env_name == 'AntVel-v1':
         param_bounds = {"goal": [0, 3]}
 
+    if args.env_name == 'AntPos-v0':
+        param_bounds = {"x": [-3, 3],
+                        "y": [-3, 3]}
+
     teacher = TeacherController(args.teacher, args.nb_test_episodes, param_bounds, seed=args.seed, teacher_params={})
     tree = TreeLSTM(args.tree_hidden_layer, len(param_bounds.keys()), args.cluster_0, args.cluster_1)
     if continuous_actions:
         policy = NormalMLPPolicy(
-            int(np.prod(sampler.envs.observation_space.shape) + 40),
+            int(np.prod(sampler.envs.observation_space.shape) + args.tree_hidden_layer),
             int(np.prod(sampler.envs.action_space.shape)),
             hidden_sizes=(args.hidden_size,) * args.num_layers, tree=tree)
     else:
         policy = CategoricalMLPPolicy(
-            int(np.prod(sampler.envs.observation_space.shape) + 40),
+            int(np.prod(sampler.envs.observation_space.shape) + args.tree_hidden_layer),
             sampler.envs.action_space.n,
             hidden_sizes=(args.hidden_size,) * args.num_layers, tree=tree)
     baseline = LinearFeatureBaseline(
-        int(np.prod(sampler.envs.observation_space.shape)) + 40)
+        int(np.prod(sampler.envs.observation_space.shape)) + args.tree_hidden_layer)
 
 
 
@@ -67,7 +71,10 @@ def main(args):
         print("starting iteration {}".format(batch))
         tasks = []
         for _ in range(args.meta_batch_size):
-            tasks.append({"velocity": teacher.task_generator.sample_task()[0]})
+            if args.env_name == 'AntPos-v0':
+                tasks.append({"position": teacher.task_generator.sample_task()})
+            if args.env_name == 'AntVel-v1':
+                tasks.append({"velocity": teacher.task_generator.sample_task()[0]})
         all_tasks.append(tasks)
        # tasks = np.array(tasks)
         # tasks = sampler.sample_tasks(num_tasks=args.meta_batch_size)
@@ -88,7 +95,10 @@ def main(args):
         tr = [torch.mean(torch.sum(rewards, dim=0)).item() for rewards in tr]
         print("rewards:", tr)
         for t in range(args.meta_batch_size):
-            teacher.task_generator.update(np.array([tasks[t]["velocity"]]), tr[t])
+            if args.env_name == 'AntPos-v0':
+                teacher.task_generator.update(tasks[t]["position"], tr[t])
+            if args.env_name == 'AntVel-v1':
+                teacher.task_generator.update(np.array([tasks[t]["velocity"]]), tr[t])
 
         # Save policy network
         with open(os.path.join(save_folder,

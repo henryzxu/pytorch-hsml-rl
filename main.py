@@ -3,11 +3,16 @@ import gym
 import numpy as np
 import torch
 import json
+import copy
+import pickle
 
 from maml_rl.metalearner import MetaLearner
 from maml_rl.policies import CategoricalMLPPolicy, NormalMLPPolicy
 from maml_rl.baseline import LinearFeatureBaseline
 from maml_rl.sampler import BatchSampler
+from maml_rl.lstm_tree import TreeLSTM
+
+from teachers.teacher_controller import TeacherController
 
 from tensorboardX import SummaryWriter
 
@@ -32,24 +37,42 @@ def main(args):
 
     sampler = BatchSampler(args.env_name, batch_size=args.fast_batch_size,
         num_workers=args.num_workers)
+
+    
+    if args.env_name == 'AntVel-v1':
+        param_bounds = {"goal": [0, 3]}
+
+    teacher = TeacherController(args.teacher, args.nb_test_episodes, param_bounds, seed=args.seed, teacher_params={})
+    tree = TreeLSTM(args.tree_hidden_layer, len(param_bounds.keys()), args.cluster_0, args.cluster_1)
     if continuous_actions:
         policy = NormalMLPPolicy(
-            int(np.prod(sampler.envs.observation_space.shape)),
+            int(np.prod(sampler.envs.observation_space.shape) + 40),
             int(np.prod(sampler.envs.action_space.shape)),
-            hidden_sizes=(args.hidden_size,) * args.num_layers)
+            hidden_sizes=(args.hidden_size,) * args.num_layers, tree=tree)
     else:
         policy = CategoricalMLPPolicy(
-            int(np.prod(sampler.envs.observation_space.shape)),
+            int(np.prod(sampler.envs.observation_space.shape) + 40),
             sampler.envs.action_space.n,
-            hidden_sizes=(args.hidden_size,) * args.num_layers)
+            hidden_sizes=(args.hidden_size,) * args.num_layers, tree=tree)
     baseline = LinearFeatureBaseline(
-        int(np.prod(sampler.envs.observation_space.shape)))
+        int(np.prod(sampler.envs.observation_space.shape)) + 40)
 
-    metalearner = MetaLearner(sampler, policy, baseline, gamma=args.gamma,
+
+
+    metalearner = MetaLearner(sampler, policy, baseline, tree=tree, gamma=args.gamma,
         fast_lr=args.fast_lr, tau=args.tau, device=args.device)
-
+    
+    all_tasks = []
     for batch in range(args.num_batches):
-        tasks = sampler.sample_tasks(num_tasks=args.meta_batch_size)
+        print("starting iteration {}".format(batch))
+        tasks = []
+        for _ in range(args.meta_batch_size):
+            tasks.append({"velocity": teacher.task_generator.sample_task()[0]})
+        all_tasks.append(tasks)
+       # tasks = np.array(tasks)
+        # tasks = sampler.sample_tasks(num_tasks=args.meta_batch_size)
+        with open('./logs/{0}/task_list.pkl'.format(args.output_folder), 'wb') as pf:
+            pickle.dump(all_tasks, pf)
         episodes = metalearner.sample(tasks, first_order=args.first_order)
         metalearner.step(episodes, max_kl=args.max_kl, cg_iters=args.cg_iters,
             cg_damping=args.cg_damping, ls_max_steps=args.ls_max_steps,
@@ -60,6 +83,12 @@ def main(args):
             total_rewards([ep.rewards for ep, _ in episodes]), batch)
         writer.add_scalar('total_rewards/after_update',
             total_rewards([ep.rewards for _, ep in episodes]), batch)
+        
+        tr = [ep.rewards for _, ep in episodes]
+        tr = [torch.mean(torch.sum(rewards, dim=0)).item() for rewards in tr]
+        print("rewards:", tr)
+        for t in range(args.meta_batch_size):
+            teacher.task_generator.update(np.array([tasks[t]["velocity"]]), tr[t])
 
         # Save policy network
         with open(os.path.join(save_folder,
@@ -112,6 +141,19 @@ if __name__ == '__main__':
         help='maximum number of iterations for line search')
     parser.add_argument('--ls-backtrack-ratio', type=float, default=0.8,
         help='maximum number of iterations for line search')
+
+    parser.add_argument('--teacher', type=str, default='ALP-GMM',
+        help='teacher variant')
+    parser.add_argument('--nb_test_episodes', type=int, default=50,
+        help='number of test tasks')
+    parser.add_argument('--tree_hidden_layer', type=int, default=40,
+                        help='size of treelstm hidden layer')
+    parser.add_argument('--cluster_0', type=int, default=4,
+                        help='number of clusters in first tree layer')
+    parser.add_argument('--cluster_1', type=int, default=2,
+                        help='number of clusters in second tree layer')
+    parser.add_argument('--seed', type=float, default=2,
+        help='teacher seed')
 
     # Miscellaneous
     parser.add_argument('--output-folder', type=str, default='maml',

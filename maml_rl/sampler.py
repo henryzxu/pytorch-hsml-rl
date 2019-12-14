@@ -1,6 +1,7 @@
 import gym
 import torch
 import multiprocessing as mp
+import numpy as np
 
 from maml_rl.envs.subproc_vec_env import SubprocVecEnv
 from maml_rl.episode import BatchEpisodes
@@ -21,7 +22,7 @@ class BatchSampler(object):
             queue=self.queue)
         self._env = gym.make(env_name)
 
-    def sample(self, policy, params=None, gamma=0.95, device='cpu'):
+    def sample(self, policy, task, tree=None, params=None, gamma=0.95, device='cpu'):
         episodes = BatchEpisodes(batch_size=self.batch_size, gamma=gamma, device=device)
         for i in range(self.batch_size):
             self.queue.put(i)
@@ -31,11 +32,17 @@ class BatchSampler(object):
         dones = [False]
         while (not all(dones)) or (not self.queue.empty()):
             with torch.no_grad():
-                observations_tensor = torch.from_numpy(observations).to(device=device)
-                actions_tensor = policy(observations_tensor, params=params).sample()
+                input = torch.from_numpy(observations).to(device=device)
+                _, embedding = tree.forward(torch.from_numpy(np.array([task["velocity"]])))
+                # print(input.shape)
+                # print(embedding.shape)
+                observations_tensor = torch.t(
+                    torch.stack([torch.cat([torch.from_numpy(np.array(teo)), embedding[0]], 0) for teo in input], 1))
+
+                actions_tensor = policy(observations_tensor, task=task, params=params, enhanced=False).sample()
                 actions = actions_tensor.cpu().numpy()
             new_observations, rewards, dones, new_batch_ids, _ = self.envs.step(actions)
-            episodes.append(observations, actions, rewards, batch_ids)
+            episodes.append(observations_tensor.numpy(), actions, rewards, batch_ids)
             observations, batch_ids = new_observations, new_batch_ids
         return episodes
 

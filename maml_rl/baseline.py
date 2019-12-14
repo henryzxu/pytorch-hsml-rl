@@ -26,11 +26,16 @@ class LinearFeatureBaseline(nn.Module):
         cum_sum = torch.cumsum(ones, dim=0) * ones
         al = cum_sum / 100.0
 
-        return torch.cat([observations, observations ** 2,
+        f = torch.cat([observations, observations ** 2,
             al, al ** 2, al ** 3, ones], dim=2)
+
+        # print(f.shape)
+
+        return f
 
     def fit(self, episodes):
         # sequence_length * batch_size x feature_size
+        # print(episodes.shape)
         featmat = self._feature(episodes).view(-1, self.feature_size)
         # sequence_length * batch_size x 1
         returns = episodes.returns.view(-1, 1)

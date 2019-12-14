@@ -13,7 +13,7 @@ class CategoricalMLPPolicy(Policy):
     https://github.com/cbfinn/maml_rl/blob/9c8e2ebd741cb0c7b8bf2d040c4caeeb8e06cc95/sandbox/rocky/tf/policies/maml_minimal_categorical_mlp_policy.py
     """
     def __init__(self, input_size, output_size,
-                 hidden_sizes=(), nonlinearity=F.relu):
+                 hidden_sizes=(), tree=None, nonlinearity=F.relu):
         super(CategoricalMLPPolicy, self).__init__(
             input_size=input_size, output_size=output_size)
         self.hidden_sizes = hidden_sizes

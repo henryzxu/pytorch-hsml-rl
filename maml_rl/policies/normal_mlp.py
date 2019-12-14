@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal
-
+import numpy as np
 from collections import OrderedDict
 from maml_rl.policies.policy import Policy, weight_init
 
@@ -14,7 +14,7 @@ class NormalMLPPolicy(Policy):
     `HalfCheetahDir`). The code is adapted from 
     https://github.com/cbfinn/maml_rl/blob/9c8e2ebd741cb0c7b8bf2d040c4caeeb8e06cc95/sandbox/rocky/tf/policies/maml_minimal_gauss_mlp_policy.py
     """
-    def __init__(self, input_size, output_size, hidden_sizes=(),
+    def __init__(self, input_size, output_size, hidden_sizes=(), tree=None,
                  nonlinearity=F.relu, init_std=1.0, min_std=1e-6):
         super(NormalMLPPolicy, self).__init__(
             input_size=input_size, output_size=output_size)
@@ -29,14 +29,25 @@ class NormalMLPPolicy(Policy):
                 nn.Linear(layer_sizes[i - 1], layer_sizes[i]))
         self.mu = nn.Linear(layer_sizes[-1], output_size)
 
+        self.tree = tree
+
         self.sigma = nn.Parameter(torch.Tensor(output_size))
         self.sigma.data.fill_(math.log(init_std))
         self.apply(weight_init)
 
-    def forward(self, input, params=None):
+
+    def forward(self, input, task=None, params=None, enhanced=False):
         if params is None:
             params = OrderedDict(self.named_parameters())
-        output = input
+
+        if False:
+            _, embedding = self.tree.forward(torch.from_numpy(np.array([task["velocity"]])))
+            # print(input.shape)
+            # print(embedding.shape)
+            output = torch.t(torch.stack([torch.cat([torch.from_numpy(np.array(teo)), embedding[0]], 0) for teo in input], 1))
+        else:
+            output = input
+        # print(output.shape)
         for i in range(1, self.num_layers):
             output = F.linear(output,
                 weight=params['layer{0}.weight'.format(i)],

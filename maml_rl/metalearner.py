@@ -40,7 +40,7 @@ class MetaLearner(object):
         self.to(device)
 
     def get_all_params(self):
-        return list(self.policy.parameters()) + list(self.tree.parameters())
+        return list(self.policy.parameters().keys()) + list(self.tree.parameters().keys())
 
     def get_all_named_params(self):
         return list(self.policy.named_parameters()) + list(self.tree.named_parameters())
@@ -208,6 +208,9 @@ class MetaLearner(object):
         #         count += 1
         #         updated_episodes.append((train_episodes, valid_episodes))
         #     episodes = updated_episodes
+
+        print(self.get_all_params())
+        raise AssertionError
 
         old_loss, _, old_pis = self.surrogate_loss(episodes)
         grads = torch.autograd.grad(old_loss, self.get_all_params())

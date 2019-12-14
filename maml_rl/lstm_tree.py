@@ -121,7 +121,7 @@ class TreeLSTM(nn.Module):
         return root_c, root_c
 
 if __name__=="__main__":
-    k = TreeLSTM(4, 2, 3, 3)
+    k = TreeLSTM(4, 2, 6, 2)
     print(k.forward(torch.tensor([1., 2.])))
     for param_tensor in k.state_dict():
         print(param_tensor, "\t", k.state_dict()[param_tensor].size())

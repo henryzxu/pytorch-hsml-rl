@@ -88,7 +88,7 @@ class TreeLSTM(nn.Module):
             value_c = assignment_idx * value_u
             value_c.unsqueeze_(0)
             c_leaf.append(value_c)
-        print(c_leaf)
+        # print(c_leaf)
         c_no_leaf = []
         for idx in range(self.cluster_layer_0):
             input_gate = []
@@ -101,7 +101,7 @@ class TreeLSTM(nn.Module):
                 #         -(tf.reduce_sum(tf.square(c_leaf[idx] - self.no_leaf_weight_i[idx_layer_1]), keepdims=True) +
                 #           self.no_leaf_bias_i[idx_layer_1]) / (
                 #             2.0))
-            print(input_gate)
+            # print(input_gate)
             input_gate = torch.nn.functional.softmax(torch.cat(input_gate, 0), dim=0)
             c_no_leaf_temp = []
             for idx_layer_1 in range(self.cluster_layer_1):

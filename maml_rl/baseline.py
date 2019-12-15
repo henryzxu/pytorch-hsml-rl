@@ -29,19 +29,18 @@ class LinearFeatureBaseline(nn.Module):
             al = cum_sum / 100.0
 
             embedding = self.tree(torch.from_numpy(task))
-            embedding = embedding.clone()
             # if self.env_name == 'AntVel-v1':
             #     _, embedding = self.tree(torch.from_numpy(np.array([task["velocity"]])))
 
             # print(input.shape)
             if len(observations.shape) == 2:
                 observations = torch.t(
-                    torch.stack([torch.cat([teo.clone(), embedding[0].clone()], 0).clone() for teo in observations],
-                                1).clone()).clone()
+                    torch.stack([torch.cat([teo, embedding[0]], 0) for teo in observations],
+                                1))
             if len(observations.shape) == 3:
                 observations = torch.stack([torch.t(
-                    torch.stack([torch.cat([teo.clone(), embedding[0].clone()], 0).clone() for teo in tei], 1).clone())
-                    for tei in observations], 1).clone().permute(1, 0, 2)
+                    torch.stack([torch.cat([teo, embedding[0]], 0) for teo in tei], 1))
+                    for tei in observations], 1).permute(1, 0, 2)
 
             f = torch.cat([observations, observations ** 2,
                 al, al ** 2, al ** 3, ones], dim=2)

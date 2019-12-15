@@ -44,17 +44,17 @@ class NormalMLPPolicy(Policy):
 
         # if self.env_name == 'AntPos-v0':
         embedding = self.tree(torch.from_numpy(task))
-        embedding = embedding.clone()
+        embedding = embedding
         # if self.env_name == 'AntVel-v1':
         #     _, embedding = self.tree(torch.from_numpy(np.array([task["velocity"]])))
 
         # print(input.shape)
         if len(input.shape) == 2:
             output = torch.t(
-                torch.stack([torch.cat([teo.clone(), embedding[0].clone()], 0).clone() for teo in input], 1).clone()).clone()
+                torch.stack([torch.cat([teo, embedding[0]], 0) for teo in input], 1))
         if len(input.shape) == 3:
             output = torch.stack([torch.t(
-                torch.stack([torch.cat([teo.clone(), embedding[0].clone()], 0).clone() for teo in tei], 1).clone()) for tei in input], 1).clone().permute(1, 0, 2)
+                torch.stack([torch.cat([teo, embedding[0]], 0) for teo in tei], 1)) for tei in input], 1).permute(1, 0, 2)
 
 
         # output = input

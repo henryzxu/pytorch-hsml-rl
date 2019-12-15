@@ -201,7 +201,7 @@ def eval(args):
                                'tree-{0}.pt'.format(batch))))
 
 
-        tasks = sampler.sample_tasks(args.meta_batch)
+        tasks = sampler.sample_tasks(args.meta_batch_size)
 
         all_tasks.append(tasks)
         # tasks = np.array(tasks)

@@ -138,6 +138,8 @@ def eval(args):
 
     tree = TreeLSTM(args.tree_hidden_layer, len(param_bounds.keys()), args.cluster_0, args.cluster_1,
                     device=args.device)
+    teacher = TeacherController(args.teacher, args.nb_test_episodes, param_bounds, seed=args.seed, teacher_params={})
+
     tree.to(args.device)
     if continuous_actions:
         policy = NormalMLPPolicy(
@@ -152,6 +154,8 @@ def eval(args):
     policy.eval()
     tree.eval()
 
+    metalearner = MetaLearner(sampler, policy, baseline, tree, gamma=args.gamma,
+                              fast_lr=args.fast_lr, tau=args.tau, device=args.device)
 
     all_tasks = []
     # torch.autograd.set_detect_anomaly(True)
@@ -162,20 +166,21 @@ def eval(args):
                                                        'policy-{0}.pt'.format(batch))))
         tree.load_state_dict(torch.load(os.path.join(save_folder,
                                'tree-{0}.pt'.format(batch))))
-
-
-        tasks = sampler.sample_tasks(args.meta_batch_size)
-
+        tasks = []
+        for _ in range(args.meta_batch_size):
+            if args.env_name == 'AntPos-v0':
+                tasks.append({"position": teacher.task_generator.sample_task()})
+            if args.env_name == 'AntVel-v1':
+                tasks.append({"velocity": teacher.task_generator.sample_task()[0]})
         all_tasks.append(tasks)
-        # tasks = np.array(tasks)
-        tasks = sampler.sample_tasks(num_tasks=args.meta_batch_size)
+
         with open('./logs/{0}/task_list_eval.pkl'.format(args.output_folder), 'wb') as pf:
             pickle.dump(all_tasks, pf)
 
         print("evaluating...".format(batch))
         all_rewards = []
         for task in tasks:
-            episodes = sampler.sample(policy, task)
+            episodes = metalearner.sample(task, first_order=args.first_order)
         # print("training...".format(batch))
 
 

@@ -69,17 +69,14 @@ class TreeLSTM(nn.Module):
 
         sigma = 5
 
-        for idx in range(len(self.cluster_center)):
-            x = inputs - self.cluster_center[idx]
-            if idx == 0:
-                all_value = torch.exp(-torch.sum(torch.mul(x, x)) / (2.0*sigma))
-            else:
-                all_value += torch.exp(-torch.sum(torch.mul(x, x)) / (2.0*sigma))
+        all_values = torch.stack([torch.exp(-torch.sum(torch.mul(inputs - self.cluster_center[idx],
+                                                                 inputs - self.cluster_center[idx])) / (2.0*sigma))
+                                  for idx in range(len(self.cluster_center))], 0)
 
         c_leaf = []
         for idx in range(len(self.cluster_center)):
             x = inputs - self.cluster_center[idx]
-            assignment_idx = torch.exp(-torch.sum(torch.mul(x, x)) / (2.0*sigma)) / all_value
+            assignment_idx = torch.exp(-torch.sum(torch.mul(x, x)) / (2.0*sigma)) / torch.sum(all_values)
             value_u = torch.tanh(self.leaf_u[idx](inputs))
             value_c = assignment_idx * value_u
             value_c.unsqueeze_(0)

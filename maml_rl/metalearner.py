@@ -81,12 +81,12 @@ class MetaLearner(object):
         episodes = []
         for task in tasks:
             self.sampler.reset_task(task)
-            train_episodes = self.sampler.sample(self.policy, task,
+            train_episodes = self.sampler.sample(self.policy, task["position"],
                 gamma=self.gamma, device=self.device)
 
             params = self.adapt(train_episodes, first_order=first_order, task=task)
 
-            valid_episodes = self.sampler.sample(self.policy, task, params=params,
+            valid_episodes = self.sampler.sample(self.policy, task["position"], params=params,
                 gamma=self.gamma, device=self.device)
             episodes.append((train_episodes, valid_episodes))
         return episodes

@@ -168,7 +168,7 @@ def eval(args):
 
         all_tasks.append(tasks)
         # tasks = np.array(tasks)
-        # tasks = sampler.sample_tasks(num_tasks=args.meta_batch_size)
+        tasks = sampler.sample_tasks(num_tasks=args.meta_batch_size)
         with open('./logs/{0}/task_list_eval.pkl'.format(args.output_folder), 'wb') as pf:
             pickle.dump(all_tasks, pf)
 

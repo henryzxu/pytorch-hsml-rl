@@ -50,10 +50,10 @@ class NormalMLPPolicy(Policy):
         print(input.shape)
         if len(input.shape) == 2:
             output = torch.t(
-                torch.stack([torch.cat([teo.clone(), embedding[0].clone()], 0) for teo in input], 1).clone())
+                torch.stack([torch.cat([teo.clone(), embedding[0].clone()], 0).clone() for teo in input], 1).clone()).clone()
         if len(input.shape) == 3:
             output = torch.stack([torch.t(
-                torch.stack([torch.cat([teo.clone(), embedding[0].clone()], 0) for teo in tei], 1).clone()) for tei in input], 1).permute(1, 0, 2)
+                torch.stack([torch.cat([teo.clone(), embedding[0].clone()], 0).clone() for teo in tei], 1).clone()) for tei in input], 1).clone().permute(1, 0, 2)
 
 
         # output = input

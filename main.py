@@ -153,7 +153,9 @@ def eval(args):
             hidden_sizes=(args.hidden_size,) * args.num_layers, tree=tree)
     policy.eval()
     tree.eval()
-
+    
+    baseline = LinearFeatureBaseline(
+        int(np.prod(sampler.envs.observation_space.shape)))
     metalearner = MetaLearner(sampler, policy, baseline, tree, gamma=args.gamma,
                               fast_lr=args.fast_lr, tau=args.tau, device=args.device)
 

@@ -30,6 +30,7 @@ class NormalMLPPolicy(Policy):
         self.mu = nn.Linear(layer_sizes[-1], output_size)
 
         self.tree = tree
+        tree.to(torch.device("cuda"))
 
         self.sigma = nn.Parameter(torch.Tensor(output_size))
         self.sigma.data.fill_(math.log(init_std))

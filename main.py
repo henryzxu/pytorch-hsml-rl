@@ -29,8 +29,8 @@ def evaluate(args, tree, policy, metalearner, teacher):
             num = path[path.index('-') + 1:path.index('.')]
             tree_path = 'tree-' + num + '.pt'
             print(tree_path)
-        policy.load_state_dict(torch.load(os.join(args.checkpoint_dir, path)))
-        tree.load_state_dict(torch.load(os.join(args.checkpoint_dir, tree_path)))
+        policy.load_state_dict(torch.load(os.path.join(args.checkpoint_dir, path)))
+        tree.load_state_dict(torch.load(os.path.join(args.checkpoint_dir, tree_path)))
         tasks = []
         for i in range(teacher.nb_test_episodes):
             if args.env_name == 'AntPos-v0':

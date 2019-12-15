@@ -46,7 +46,7 @@ class MetaLearner(object):
         loss is REINFORCE with baseline [2], computed on advantages estimated 
         with Generalized Advantage Estimation (GAE, [3]).
         """
-        values = self.baseline(episodes)
+        values = self.baseline(episodes, task)
         advantages = episodes.gae(values, tau=self.tau)
         advantages = weighted_normalize(advantages, weights=episodes.mask)
 
@@ -64,7 +64,7 @@ class MetaLearner(object):
         sampled trajectories `episodes`, with a one-step gradient update [1].
         """
         # Fit the baseline to the training episodes
-        self.baseline.fit(episodes)
+        self.baseline.fit(episodes, task)
         # Get the loss on the training episodes
         loss = self.inner_loss(episodes, task)
         # Get the new parameters after a one-step gradient update
@@ -140,7 +140,7 @@ class MetaLearner(object):
                 if old_pi is None:
                     old_pi = detach_distribution(pi)
 
-                values = self.baseline(valid_episodes)
+                values = self.baseline(valid_episodes, task)
                 advantages = valid_episodes.gae(values, tau=self.tau)
                 advantages = weighted_normalize(advantages,
                     weights=valid_episodes.mask)

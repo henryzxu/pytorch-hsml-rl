@@ -59,7 +59,7 @@ def main(args):
             sampler.envs.action_space.n,
             hidden_sizes=(args.hidden_size,) * args.num_layers, tree=tree)
     baseline = LinearFeatureBaseline(
-        int(np.prod(sampler.envs.observation_space.shape)))
+        int(np.prod(sampler.envs.observation_space.shape)) + args.tree_hidden_layer, tree)
 
 
 

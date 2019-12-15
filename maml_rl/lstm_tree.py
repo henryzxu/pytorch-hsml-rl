@@ -118,7 +118,7 @@ class TreeLSTM(nn.Module):
 
         root_c = torch.sum(torch.cat(root_c, 0), dim=0, keepdim=True)
 
-        return root_c, root_c
+        return root_c
 
 if __name__=="__main__":
     k = TreeLSTM(4, 2, 6, 2)

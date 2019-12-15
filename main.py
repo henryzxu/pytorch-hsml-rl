@@ -126,6 +126,9 @@ def eval(args):
     save_folder = './saves/{0}'.format(args.output_folder)
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
+    log_folder = './logs/{0}'.format(args.output_folder)
+    if not os.path.exists(log_folder):
+        os.makedirs(log_folder)
 
     sampler = BatchSampler(args.env_name, batch_size=args.fast_batch_size,
                            num_workers=args.num_workers)
@@ -157,15 +160,16 @@ def eval(args):
     all_tasks = []
     # torch.autograd.set_detect_anomaly(True)
     reward_list = []
-    for batch in range(args.num_batches):
+    for batch in range(24):
         print("starting iteration {}".format(batch))
         policy.load_state_dict(torch.load(os.path.join(save_folder,
                                                        'policy-{0}.pt'.format(batch))))
-        tree.load_state_dict(torch.load(os.path.join(save_folder,
-                               'tree-{0}.pt'.format(batch))))
+
+        # tree.load_state_dict(torch.load(os.path.join(save_folder,
+        #                        'tree-{0}.pt'.format(batch))))
 
 
-        tasks = sampler.sample_tasks(args.meta_batch)
+        tasks = sampler.sample_tasks(args.meta_batch_size)
 
         all_tasks.append(tasks)
         # tasks = np.array(tasks)
@@ -176,13 +180,14 @@ def eval(args):
         print("evaluating...".format(batch))
         all_rewards = []
         for task in tasks:
-            episodes = sampler.sample(policy, task)
+            print(task["position"])
+            episodes = sampler.sample(policy, task["position"])
         # print("training...".format(batch))
 
 
-            tr = [ep.rewards for ep in episodes]
-            tr = np.mean([torch.mean(torch.sum(rewards, dim=0)).item() for rewards in tr])
-            all_rewards.append(tr)
+            # tr = [ep.rewards for ep in episodes]
+            # tr = np.mean([torch.mean(torch.sum(rewards, dim=0)).item() for rewards in tr])
+            all_rewards.append(total_rewards(episodes.rewards))
 
         reward_list.append(np.mean(all_rewards))
 

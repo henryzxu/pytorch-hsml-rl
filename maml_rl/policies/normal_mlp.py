@@ -53,7 +53,7 @@ class NormalMLPPolicy(Policy):
                 torch.stack([torch.cat([torch.from_numpy(np.array(teo)), embedding[0]], 0) for teo in input], 1))
         if len(input.shape) == 3:
             output = torch.stack([torch.t(
-                torch.stack([torch.cat([torch.from_numpy(np.array(teo)), embedding[0]], 0) for teo in tei], 1)) for tei in input], 0)
+                torch.stack([torch.cat([torch.from_numpy(np.array(teo)), embedding[0]], 0) for teo in tei], 1)) for tei in input], 1).permute(1, 0, 2)
 
 
         # output = input

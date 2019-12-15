@@ -41,10 +41,10 @@ class NormalMLPPolicy(Policy):
             params = OrderedDict(self.named_parameters())
 
 
-        if self.env_name == 'AntPos-v0':
-            _, embedding = self.tree(torch.from_numpy(task["position"]))
-        if self.env_name == 'AntVel-v1':
-            _, embedding = self.tree(torch.from_numpy(np.array([task["velocity"]])))
+        # if self.env_name == 'AntPos-v0':
+        _, embedding = self.tree(torch.from_numpy(task["position"]))
+        # if self.env_name == 'AntVel-v1':
+        #     _, embedding = self.tree(torch.from_numpy(np.array([task["velocity"]])))
 
         # print(input.shape)
         # print(embedding.shape)

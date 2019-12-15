@@ -20,10 +20,9 @@ class Policy(nn.Module):
         network.
         """
         grads = torch.autograd.grad(loss, self.parameters(),
-            create_graph=not first_order, allow_unused=True)
+            create_graph=not first_order)
         updated_params = OrderedDict()
         for (name, param), grad in zip(self.named_parameters(), grads):
-            if grad is not None:
-                updated_params[name] = param - step_size * grad
+            updated_params[name] = param - step_size * grad
 
         return updated_params

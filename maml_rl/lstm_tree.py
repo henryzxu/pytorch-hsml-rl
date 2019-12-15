@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-
-from torch.autograd import Variable
+import torch.nn.functional as F
+from collections import OrderedDict
 
 def weight_init(module):
     if isinstance(module, nn.Linear):
@@ -65,19 +65,71 @@ class TreeLSTM(nn.Module):
         self.cluster_center = nn.ParameterList(cluster_centers)
 
 
-    def forward(self, inputs):
-
+    def forward(self, inputs, params=None):
         sigma = 5
 
-        all_values = torch.stack([torch.exp(-torch.sum(torch.mul(inputs - self.cluster_center[idx],
-                                                                 inputs - self.cluster_center[idx])) / (2.0*sigma))
+        if params is None:
+            params = OrderedDict(self.named_parameters())
+
+            # all_values = torch.stack([torch.exp(-torch.sum(torch.mul(inputs - self.cluster_center[idx],
+            #                                                          inputs - self.cluster_center[idx])) / (2.0*sigma))
+            #                           for idx in range(len(self.cluster_center))], 0)
+            #
+            # c_leaf = []
+            # for idx in range(len(self.cluster_center)):
+            #     x = inputs - self.cluster_center[idx]
+            #     assignment_idx = torch.exp(-torch.sum(torch.mul(x, x)) / (2.0*sigma)) / torch.sum(all_values)
+            #     value_u = torch.tanh(self.leaf_u[idx](inputs))
+            #     value_c = assignment_idx * value_u
+            #     value_c.unsqueeze_(0)
+            #     c_leaf.append(value_c)
+            # # print(c_leaf)
+            # c_no_leaf = []
+            # for idx in range(len(self.cluster_center)):
+            #     input_gate = []
+            #     for idx_layer_1 in range(len(self.no_leaf_i)):
+            #         if True:
+            #             input_gate.append(
+            #                 self.no_leaf_i[idx_layer_1](c_leaf[idx]))
+            #         # elif FLAGS.tree_type == 2:
+            #         #     input_gate.append(
+            #         #         -(tf.reduce_sum(tf.square(c_leaf[idx] - self.no_leaf_weight_i[idx_layer_1]), keepdims=True) +
+            #         #           self.no_leaf_bias_i[idx_layer_1]) / (
+            #         #             2.0))
+            #     # print(input_gate)
+            #     input_gate = torch.nn.functional.softmax(torch.cat(input_gate, 0), dim=0)
+            #     c_no_leaf_temp = []
+            #     for idx_layer_1 in range(len(self.no_leaf_i)):
+            #         no_leaf_value_u = torch.tanh(self.no_leaf_u[idx_layer_1](c_leaf[idx]))
+            #         c_no_leaf_temp.append(input_gate[idx_layer_1] * no_leaf_value_u)
+            #     c_no_leaf.append(torch.cat(c_no_leaf_temp, 0))
+            #     # print()
+            #
+            # c_no_leaf = torch.stack(c_no_leaf, 0)
+            # # print(c_no_leaf.shape)
+            # c_no_leaf = c_no_leaf.permute(1, 0, 2)
+            # c_no_leaf = torch.sum(c_no_leaf, dim=1, keepdim=True)
+            #
+            # root_c = []
+            #
+            # for idx in range(len(self.no_leaf_i)):
+            #     root_c.append(torch.tanh(self.root_leaf_u(c_no_leaf[idx])))
+            #
+            # root_c = torch.sum(torch.cat(root_c, 0), dim=0, keepdim=True)
+        # else:
+
+        all_values = torch.stack([torch.exp(-torch.sum(torch.mul(inputs - params["tree.cluster_center.{0}".format(idx)],
+                                                                 inputs - params["tree.cluster_center.{0}".format(idx)])) / (
+                                                        2.0 * sigma))
                                   for idx in range(len(self.cluster_center))], 0)
 
         c_leaf = []
         for idx in range(len(self.cluster_center)):
-            x = inputs - self.cluster_center[idx]
-            assignment_idx = torch.exp(-torch.sum(torch.mul(x, x)) / (2.0*sigma)) / torch.sum(all_values)
-            value_u = torch.tanh(self.leaf_u[idx](inputs))
+            x = inputs - params["tree.cluster_center.{0}".format(idx)]
+            assignment_idx = torch.exp(-torch.sum(torch.mul(x, x)) / (2.0 * sigma)) / torch.sum(all_values)
+            value_u = F.linear(inputs, weight=params['tree.leaf_u.{0}.weight'.format(idx)],
+                               bias=params['tree.leaf_u.{0}.bias'.format(idx)])
+            value_u = torch.tanh(value_u)
             value_c = assignment_idx * value_u
             value_c.unsqueeze_(0)
             c_leaf.append(value_c)
@@ -87,8 +139,8 @@ class TreeLSTM(nn.Module):
             input_gate = []
             for idx_layer_1 in range(len(self.no_leaf_i)):
                 if True:
-                    input_gate.append(
-                        self.no_leaf_i[idx_layer_1](c_leaf[idx]))
+                    input_gate.append(F.linear(c_leaf[idx], weight=params['tree.no_leaf_i.{0}.weight'.format(idx_layer_1)],
+                               bias=params['tree.no_leaf_i.{0}.bias'.format(idx_layer_1)]))
                 # elif FLAGS.tree_type == 2:
                 #     input_gate.append(
                 #         -(tf.reduce_sum(tf.square(c_leaf[idx] - self.no_leaf_weight_i[idx_layer_1]), keepdims=True) +
@@ -98,7 +150,8 @@ class TreeLSTM(nn.Module):
             input_gate = torch.nn.functional.softmax(torch.cat(input_gate, 0), dim=0)
             c_no_leaf_temp = []
             for idx_layer_1 in range(len(self.no_leaf_i)):
-                no_leaf_value_u = torch.tanh(self.no_leaf_u[idx_layer_1](c_leaf[idx]))
+                no_leaf_value_u = torch.tanh(F.linear(c_leaf[idx], weight=params['tree.no_leaf_u.{0}.weight'.format(idx_layer_1)],
+                               bias=params['tree.no_leaf_u.{0}.bias'.format(idx_layer_1)]))
                 c_no_leaf_temp.append(input_gate[idx_layer_1] * no_leaf_value_u)
             c_no_leaf.append(torch.cat(c_no_leaf_temp, 0))
             # print()
@@ -111,7 +164,8 @@ class TreeLSTM(nn.Module):
         root_c = []
 
         for idx in range(len(self.no_leaf_i)):
-            root_c.append(torch.tanh(self.root_leaf_u(c_no_leaf[idx])))
+            root_c.append(torch.tanh(F.linear(c_no_leaf[idx], weight=params['tree.root_leaf_u.weight'],
+                     bias=params['tree.no_leaf_u.bias'])))
 
         root_c = torch.sum(torch.cat(root_c, 0), dim=0, keepdim=True)
 

@@ -42,7 +42,7 @@ class NormalMLPPolicy(Policy):
 
 
         # if self.env_name == 'AntPos-v0':
-        embedding = self.tree(torch.from_numpy(task))
+        embedding = self.tree(torch.from_numpy(task), params=params)
         embedding = embedding
         # if self.env_name == 'AntVel-v1':
         #     _, embedding = self.tree(torch.from_numpy(np.array([task["velocity"]])))

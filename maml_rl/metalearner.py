@@ -33,7 +33,6 @@ class MetaLearner(object):
         self.sampler = sampler
         self.policy = policy
         self.baseline = baseline
-        self.tree = tree
         self.gamma = gamma
         self.fast_lr = fast_lr
         self.tau = tau
@@ -42,10 +41,7 @@ class MetaLearner(object):
     def get_all_params(self):
         return self.policy.parameters()
 
-    def get_all_named_params(self):
-        return list(self.policy.named_parameters()) + list(self.tree.named_parameters())
-
-    def inner_loss(self, episodes, params=None):
+    def inner_loss(self, episodes, task, params=None):
         """Compute the inner loss for the one-step gradient update. The inner 
         loss is REINFORCE with baseline [2], computed on advantages estimated 
         with Generalized Advantage Estimation (GAE, [3]).
@@ -54,7 +50,7 @@ class MetaLearner(object):
         advantages = episodes.gae(values, tau=self.tau)
         advantages = weighted_normalize(advantages, weights=episodes.mask)
 
-        pi = self.policy(episodes.observations, task=None, params=params, enhanced=True)
+        pi = self.policy(episodes.observations, task=task, params=params, enhanced=True)
         log_probs = pi.log_prob(episodes.actions)
         if log_probs.dim() > 2:
             log_probs = torch.sum(log_probs, dim=2)
@@ -63,14 +59,14 @@ class MetaLearner(object):
 
         return loss
 
-    def adapt(self, episodes, first_order=False):
+    def adapt(self, episodes, first_order=False, task=None):
         """Adapt the parameters of the policy network to a new task, from 
         sampled trajectories `episodes`, with a one-step gradient update [1].
         """
         # Fit the baseline to the training episodes
         self.baseline.fit(episodes)
         # Get the loss on the training episodes
-        loss = self.inner_loss(episodes)
+        loss = self.inner_loss(episodes, task)
         # Get the new parameters after a one-step gradient update
         params = self.policy.update_params(loss, step_size=self.fast_lr,
             first_order=first_order)
@@ -81,15 +77,16 @@ class MetaLearner(object):
         """Sample trajectories (before and after the update of the parameters) 
         for all the tasks `tasks`.
         """
+        self.tasks = [t["position"] for t in tasks]
         episodes = []
         for task in tasks:
             self.sampler.reset_task(task)
-            train_episodes = self.sampler.sample(self.policy, task, tree=self.tree,
+            train_episodes = self.sampler.sample(self.policy, task,
                 gamma=self.gamma, device=self.device)
 
-            params = self.adapt(train_episodes, first_order=first_order)
+            params = self.adapt(train_episodes, first_order=first_order, task=task)
 
-            valid_episodes = self.sampler.sample(self.policy, task, tree=self.tree, params=params,
+            valid_episodes = self.sampler.sample(self.policy, task, params=params,
                 gamma=self.gamma, device=self.device)
             episodes.append((train_episodes, valid_episodes))
         return episodes
@@ -99,9 +96,9 @@ class MetaLearner(object):
         if old_pis is None:
             old_pis = [None] * len(episodes)
 
-        for (train_episodes, valid_episodes), old_pi in zip(episodes, old_pis):
-            params = self.adapt(train_episodes)
-            pi = self.policy(valid_episodes.observations, task=None, params=params, enhanced=True)
+        for (train_episodes, valid_episodes), old_pi, task in zip(episodes, old_pis, self.tasks):
+            params = self.adapt(train_episodes, task=task)
+            pi = self.policy(valid_episodes.observations, task=task, params=params, enhanced=True)
 
             if old_pi is None:
                 old_pi = detach_distribution(pi)
@@ -134,10 +131,10 @@ class MetaLearner(object):
         if old_pis is None:
             old_pis = [None] * len(episodes)
 
-        for (train_episodes, valid_episodes), old_pi in zip(episodes, old_pis):
-            params = self.adapt(train_episodes)
+        for (train_episodes, valid_episodes), old_pi, task in zip(episodes, old_pis, self.tasks):
+            params = self.adapt(train_episodes, task=task)
             with torch.set_grad_enabled(old_pi is None):
-                pi = self.policy(valid_episodes.observations, task=None, params=params, enhanced=True)
+                pi = self.policy(valid_episodes.observations, task=task, params=params, enhanced=True)
                 pis.append(detach_distribution(pi))
 
                 if old_pi is None:
@@ -249,6 +246,4 @@ class MetaLearner(object):
     def to(self, device, **kwargs):
         self.policy.to(device, **kwargs)
         self.baseline.to(device, **kwargs)
-        if self.tree:
-            self.tree.to(device, **kwargs)
         self.device = device

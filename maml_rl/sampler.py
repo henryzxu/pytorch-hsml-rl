@@ -31,20 +31,19 @@ class BatchSampler(object):
         observations, batch_ids = self.envs.reset()
         dones = [False]
         while (not all(dones)) or (not self.queue.empty()):
-            input = torch.from_numpy(observations).to(device=device)
-
-            if self.env_name == 'AntPos-v0':
-                _, embedding = tree.forward(torch.from_numpy(task["position"]).to(device=device))
-            if self.env_name == 'AntVel-v1':
-                _, embedding = tree.forward(torch.from_numpy(np.array([task["velocity"]])).to(device=device))
-
-            # print(input.shape)
-            # print(embedding.shape)
-            observations_tensor = torch.t(
-                torch.stack(
-                    [torch.cat([torch.from_numpy(np.array(teo)).to(device=device), embedding[0]], 0) for teo in input],
-                    1))
             with torch.no_grad():
+                # input = torch.from_numpy(observations).to(device=device)
+                #
+                # if self.env_name == 'AntPos-v0':
+                #     _, embedding = tree.forward(torch.from_numpy(task["position"]).to(device=device))
+                # if self.env_name == 'AntVel-v1':
+                #     _, embedding = tree.forward(torch.from_numpy(np.array([task["velocity"]])).to(device=device))
+                #
+                # # print(input.shape)
+                # # print(embedding.shape)
+                # observations_tensor = torch.t(
+                #     torch.stack([torch.cat([torch.from_numpy(np.array(teo)).to(device=device), embedding[0]], 0) for teo in input], 1))
+                observations_tensor = torch.from_numpy(observations).to(device=device)
                 actions_tensor = policy(observations_tensor, task=task, params=params, enhanced=False).sample()
                 actions = actions_tensor.cpu().numpy()
             new_observations, rewards, dones, new_batch_ids, _ = self.envs.step(actions)

@@ -64,7 +64,7 @@ def main(args):
 
 
 
-    metalearner = MetaLearner(sampler, policy, baseline, gamma=args.gamma,
+    metalearner = MetaLearner(sampler, policy, baseline, tree, gamma=args.gamma,
         fast_lr=args.fast_lr, tau=args.tau, device=args.device)
     
     all_tasks = []

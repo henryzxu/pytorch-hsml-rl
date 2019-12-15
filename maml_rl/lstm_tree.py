@@ -165,7 +165,7 @@ class TreeLSTM(nn.Module):
 
         for idx in range(len(self.no_leaf_i)):
             root_c.append(torch.tanh(F.linear(c_no_leaf[idx], weight=params['tree.root_leaf_u.weight'],
-                     bias=params['tree.no_leaf_u.bias'])))
+                     bias=params['tree.root_leaf_u.bias'])))
 
         root_c = torch.sum(torch.cat(root_c, 0), dim=0, keepdim=True)
 

@@ -84,7 +84,7 @@ class MetaLearner(object):
             train_episodes = self.sampler.sample(self.policy, task["position"],
                 gamma=self.gamma, device=self.device)
 
-            params = self.adapt(train_episodes, first_order=first_order, task=task)
+            params = self.adapt(train_episodes, first_order=first_order, task=task["position"])
 
             valid_episodes = self.sampler.sample(self.policy, task["position"], params=params,
                 gamma=self.gamma, device=self.device)

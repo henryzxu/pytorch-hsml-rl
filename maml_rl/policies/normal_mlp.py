@@ -41,31 +41,31 @@ class NormalMLPPolicy(Policy):
         if params is None:
             params = OrderedDict(self.named_parameters())
 
-        with torch.autograd.set_detect_anomaly(True):
-            # if self.env_name == 'AntPos-v0':
-            embedding = self.tree(torch.from_numpy(task))
-            embedding = embedding.clone()
-            # if self.env_name == 'AntVel-v1':
-            #     _, embedding = self.tree(torch.from_numpy(np.array([task["velocity"]])))
 
-            print(input.shape)
-            if len(input.shape) == 2:
-                output = torch.t(
-                    torch.stack([torch.cat([teo.clone(), embedding[0].clone()], 0).clone() for teo in input], 1).clone()).clone()
-            if len(input.shape) == 3:
-                output = torch.stack([torch.t(
-                    torch.stack([torch.cat([teo.clone(), embedding[0].clone()], 0).clone() for teo in tei], 1).clone()) for tei in input], 1).clone().permute(1, 0, 2)
+        # if self.env_name == 'AntPos-v0':
+        embedding = self.tree(torch.from_numpy(task))
+        embedding = embedding.clone()
+        # if self.env_name == 'AntVel-v1':
+        #     _, embedding = self.tree(torch.from_numpy(np.array([task["velocity"]])))
+
+        print(input.shape)
+        if len(input.shape) == 2:
+            output = torch.t(
+                torch.stack([torch.cat([teo.clone(), embedding[0].clone()], 0).clone() for teo in input], 1).clone()).clone()
+        if len(input.shape) == 3:
+            output = torch.stack([torch.t(
+                torch.stack([torch.cat([teo.clone(), embedding[0].clone()], 0).clone() for teo in tei], 1).clone()) for tei in input], 1).clone().permute(1, 0, 2)
 
 
-            # output = input
-            print(output.shape)
-            for i in range(1, self.num_layers):
-                output = F.linear(output,
-                    weight=params['layer{0}.weight'.format(i)],
-                    bias=params['layer{0}.bias'.format(i)])
-                output = self.nonlinearity(output)
-            mu = F.linear(output, weight=params['mu.weight'],
-                bias=params['mu.bias'])
-            scale = torch.exp(torch.clamp(params['sigma'], min=self.min_log_std))
+        # output = input
+        print(output.shape)
+        for i in range(1, self.num_layers):
+            output = F.linear(output,
+                weight=params['layer{0}.weight'.format(i)],
+                bias=params['layer{0}.bias'.format(i)])
+            output = self.nonlinearity(output)
+        mu = F.linear(output, weight=params['mu.weight'],
+            bias=params['mu.bias'])
+        scale = torch.exp(torch.clamp(params['sigma'], min=self.min_log_std))
 
-            return Normal(loc=mu, scale=scale)
+        return Normal(loc=mu, scale=scale)

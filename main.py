@@ -67,6 +67,7 @@ def main(args):
         fast_lr=args.fast_lr, tau=args.tau, device=args.device)
     
     all_tasks = []
+    torch.autograd.set_detect_anomaly(True)
     for batch in range(args.num_batches):
         print("starting iteration {}".format(batch))
         tasks = []

@@ -21,6 +21,38 @@ def total_rewards(episodes_rewards, aggregation=torch.mean):
         for rewards in episodes_rewards], dim=0))
     return rewards.item()
 
+def evaluate(args, tree, policy, metalearner, teacher):
+    writer = SummaryWriter('./eval_logs/{0}'.format(args.output_folder))
+    avg_rewards = []
+    for path in os.listdir(args.checkpoint_dir):
+        if path.startswith('policy'):
+            num = path[path.index('-') + 1:path.index['.']]
+            tree_path = 'tree-' + num + '.pt'
+            print(tree_path)
+        policy.load_state_dict(torch.load(os.join(args.checkpoint_dir, path)))
+        tree.load_state_dict(torch.load(os.join(args.checkpoint_dir, tree_path)))
+        tasks = []
+        for i in range(teacher.nb_test_episodes):
+            if args.env_name == 'AntPos-v0':
+                tasks.append({"position": teacher.task_generator.sample_task()})
+            if args.env_name == 'AntVel-v1':
+                tasks.append({"velocity": teacher.task_generator.sample_task()[0]})
+
+        print("collecting data...".format(path))
+        episodes = metalearner.sample(tasks, first_order=args.first_order)
+        print("training...".format(path))
+        metalearner.step(episodes, max_kl=args.max_kl, cg_iters=args.cg_iters,
+                         cg_damping=args.cg_damping, ls_max_steps=args.ls_max_steps,
+                         ls_backtrack_ratio=args.ls_backtrack_ratio)
+        avg_rewards.append(total_rewards([ep.rewards for ep, _ in episodes]))
+        # Tensorboard
+        writer.add_scalar('total_rewards/before_update',
+                          total_rewards([ep.rewards for ep, _ in episodes]), 0)
+        writer.add_scalar('total_rewards/after_update',
+                          total_rewards([ep.rewards for _, ep in episodes]), 0)
+
+    return avg_rewards
+
 def main(args):
     continuous_actions = (args.env_name in ['AntVel-v1', 'AntDir-v1',
         'AntPos-v0', 'HalfCheetahVel-v1', 'HalfCheetahDir-v1',
@@ -45,8 +77,10 @@ def main(args):
     if args.env_name == 'AntPos-v0':
         param_bounds = {"x": [-3, 3],
                         "y": [-3, 3]}
-
-    teacher = TeacherController(args.teacher, args.nb_test_episodes, param_bounds, seed=args.seed, teacher_params={})
+    if not args.eval:
+        teacher = TeacherController(args.teacher, args.nb_test_episodes, param_bounds, seed=args.seed, teacher_params={})
+    else:
+        teacher = TeacherController('Random', args.nb_test_episodes, param_bounds, seed=args.seed, teacher_params={})
     tree = TreeLSTM(args.tree_hidden_layer, len(param_bounds.keys()), args.cluster_0, args.cluster_1, device=args.device)
     if continuous_actions:
         policy = NormalMLPPolicy(
@@ -65,7 +99,9 @@ def main(args):
 
     metalearner = MetaLearner(sampler, policy, baseline, gamma=args.gamma,
         fast_lr=args.fast_lr, tau=args.tau, device=args.device)
-    
+    if args.eval:
+        print(evaluate(args, tree, policy, metalearner, teacher))
+        return
     all_tasks = []
     # torch.autograd.set_detect_anomaly(True)
     for batch in range(args.num_batches):
@@ -161,6 +197,9 @@ if __name__ == '__main__':
         help='maximum number of iterations for line search')
     parser.add_argument('--ls-backtrack-ratio', type=float, default=0.8,
         help='maximum number of iterations for line search')
+
+    parser.add_argument('--eval', type=bool, default=False)
+    parser.add_argument('--checkpoint_dir', type=str, default='saves/hsml_antpos_alp-gmm_teacher_trained')
 
     parser.add_argument('--teacher', type=str, default='ALP-GMM',
         help='teacher variant')

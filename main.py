@@ -26,7 +26,7 @@ def evaluate(args, tree, policy, metalearner, teacher):
     avg_rewards = []
     for path in os.listdir(args.checkpoint_dir):
         if path.startswith('policy'):
-            num = path[path.index('-') + 1:path.index['.']]
+            num = path[path.index('-') + 1:path.index('.')]
             tree_path = 'tree-' + num + '.pt'
             print(tree_path)
         policy.load_state_dict(torch.load(os.join(args.checkpoint_dir, path)))

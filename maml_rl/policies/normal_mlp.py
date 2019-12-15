@@ -47,7 +47,7 @@ class NormalMLPPolicy(Policy):
         # if self.env_name == 'AntVel-v1':
         #     _, embedding = self.tree(torch.from_numpy(np.array([task["velocity"]])))
 
-        # print(input.shape)
+        print(input.shape)
 
         output = torch.t(
             torch.stack([torch.cat([torch.from_numpy(np.array(teo)), embedding[0]], 0) for teo in input], 1))

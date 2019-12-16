@@ -156,40 +156,44 @@ def eval(args):
     policy.eval()
     tree.eval()
 
-
+    metalearner = MetaLearner(sampler, policy, baseline, tree, gamma=args.gamma,
+        fast_lr=args.fast_lr, tau=args.tau, device=args.device)
     all_tasks = []
     # torch.autograd.set_detect_anomaly(True)
     reward_list = []
-    for batch in range(24):
-        print("starting iteration {}".format(batch))
-        policy.load_state_dict(torch.load(os.path.join(save_folder,
-                                                       'policy-{0}.pt'.format(batch))))
+    batch = 45
+    print("starting iteration {}".format(batch))
+    policy.load_state_dict(torch.load(os.path.join(save_folder,
+                                                   'policy-{0}.pt'.format(batch))))
 
-        # tree.load_state_dict(torch.load(os.path.join(save_folder,
-        #                        'tree-{0}.pt'.format(batch))))
-
-
-        tasks = sampler.sample_tasks(args.meta_batch_size)
-
-        all_tasks.append(tasks)
-        # tasks = np.array(tasks)
-        # tasks = sampler.sample_tasks(num_tasks=args.meta_batch_size)
-        with open('./logs/{0}/task_list_eval.pkl'.format(args.output_folder), 'wb') as pf:
-            pickle.dump(all_tasks, pf)
-
-        print("evaluating...".format(batch))
-        all_rewards = []
-        for task in tasks:
-            print(task["position"])
-            episodes = sampler.sample(policy, task["position"])
-        # print("training...".format(batch))
+    # tree.load_state_dict(torch.load(os.path.join(save_folder,
+    #                        'tree-{0}.pt'.format(batch))))
 
 
-            # tr = [ep.rewards for ep in episodes]
-            # tr = np.mean([torch.mean(torch.sum(rewards, dim=0)).item() for rewards in tr])
-            all_rewards.append(total_rewards(episodes.rewards))
+    tasks = sampler.sample_tasks(args.meta_batch_size)
 
-        reward_list.append(np.mean(all_rewards))
+    all_tasks.append(tasks)
+    # tasks = np.array(tasks)
+    # tasks = sampler.sample_tasks(num_tasks=args.meta_batch_size)
+    with open('./logs/{0}/task_list_eval.pkl'.format(args.output_folder), 'wb') as pf:
+        pickle.dump(all_tasks, pf)
+
+    print("evaluating...".format(batch))
+    all_rewards = []
+    for task in tasks:
+        print(task["position"])
+        episodes = sampler.sample(policy, task["position"])
+        metalearner.step(episodes, max_kl=args.max_kl, cg_iters=args.cg_iters,
+        cg_damping=args.cg_damping, ls_max_steps=args.ls_max_steps,
+        ls_backtrack_ratio=args.ls_backtrack_ratio)
+    # print("training...".format(batch))
+
+
+        # tr = [ep.rewards for ep in episodes]
+        # tr = np.mean([torch.mean(torch.sum(rewards, dim=0)).item() for rewards in tr])
+        all_rewards.append(total_rewards(episodes.rewards))
+    reward_list.append(total_rewards([ep.rewards for ep, _ in episodes]))
+    reward_list.append(total_rewards([ep.rewards for _,ep in episodes]))
 
 
 

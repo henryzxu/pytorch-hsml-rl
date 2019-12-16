@@ -193,7 +193,7 @@ def eval(args):
         # tr = np.mean([torch.mean(torch.sum(rewards, dim=0)).item() for rewards in tr])
         all_rewards.append(total_rewards(episodes.rewards))
     reward_list.append(total_rewards([ep.rewards for ep, _ in episodes]))
-    reward_list.append(total_rewards([ep.rewards for _,ep in episodes]))
+    reward_list.append(total_rewards(all_rewards))
 
 
 

@@ -180,6 +180,7 @@ def eval(args):
 
     print("evaluating...".format(batch))
     all_rewards = []
+    all_rewards_after = []
     for task in tasks:
         print(task["position"])
         episodes = sampler.sample(policy, task["position"])
@@ -191,9 +192,10 @@ def eval(args):
 
         # tr = [ep.rewards for ep in episodes]
         # tr = np.mean([torch.mean(torch.sum(rewards, dim=0)).item() for rewards in tr])
-        all_rewards.append(total_rewards(episodes.rewards))
-    reward_list.append(total_rewards([ep.rewards for ep, _ in episodes]))
-    reward_list.append(total_rewards([ep.rewards for _,ep in episodes]))
+        all_rewards.append(total_rewards([ep.rewards for ep, _ in episodes]))
+        all_rewards_after.append(total_rewards([ep.rewards for _, ep in episodes]))
+    reward_list.append(np.mean(all_rewards))
+    reward_list.append(np.mean(all_rewards_after))
 
 
 
@@ -363,7 +365,7 @@ if __name__ == '__main__':
     parser.add_argument('--do-eval', action='store_true',
                         help='do eval')
 
-    parser.add_argument('--do-eval', action='store_true',
+    parser.add_argument('--do_eval', action='store_true',
                         help='do eval')
 
     args = parser.parse_args()

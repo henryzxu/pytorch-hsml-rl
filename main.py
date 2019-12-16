@@ -201,6 +201,95 @@ def eval(args):
 
 
 
+def eval(args):
+    continuous_actions = (args.env_name in ['AntVel-v1', 'AntDir-v1',
+                                            'AntPos-v0', 'HalfCheetahVel-v1', 'HalfCheetahDir-v1',
+                                            '2DNavigation-v0'])
+
+    # writer = SummaryWriter('./logs/{0}'.format(args.output_folder))
+    save_folder = './saves/{0}'.format(args.output_folder)
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
+    log_folder = './logs/{0}'.format(args.output_folder)
+    if not os.path.exists(log_folder):
+        os.makedirs(log_folder)
+
+    sampler = BatchSampler(args.env_name, batch_size=args.fast_batch_size,
+                           num_workers=args.num_workers)
+
+    if args.env_name == 'AntPos-v0':
+        param_bounds = {"x": [-3, 3],
+                        "y": [-3, 3]}
+
+    tree = TreeLSTM(args.tree_hidden_layer, len(param_bounds.keys()), args.cluster_0, args.cluster_1, device=args.device)
+
+
+    if continuous_actions:
+        policy = NormalMLPPolicy(
+            int(np.prod(sampler.envs.observation_space.shape)),
+            int(np.prod(sampler.envs.action_space.shape)),
+            hidden_sizes=(args.hidden_size,) * args.num_layers)
+    else:
+        policy = CategoricalMLPPolicy(
+            int(np.prod(sampler.envs.observation_space.shape)),
+            sampler.envs.action_space.n,
+            hidden_sizes=(args.hidden_size,) * args.num_layers)
+    policy.eval()
+    tree.eval()
+
+
+    all_tasks = []
+    # torch.autograd.set_detect_anomaly(True)
+    reward_list = []
+    for batch in range(args.num_batches + 1):
+        print("starting iteration {}".format(batch))
+        try:
+            policy.load_state_dict(torch.load(os.path.join(save_folder,
+                                                       'policy-{0}.pt'.format(batch))))
+            tree = torch.load(os.path.join(save_folder,
+                                                       'tree-{0}.pt'.format(batch)))
+            tree.eval()
+        except Exception:
+            with open('./logs/{0}/reward_list_eval.pkl'.format(args.output_folder), 'wb') as pf:
+                pickle.dump(reward_list, pf)
+
+            print(reward_list)
+            return
+
+        # tree.load_state_dict(torch.load(os.path.join(save_folder,
+        #                        'tree-{0}.pt'.format(batch))))
+
+
+        tasks = sampler.sample_tasks(args.meta_batch_size)
+
+        all_tasks.append(tasks)
+        # tasks = np.array(tasks)
+        # tasks = sampler.sample_tasks(num_tasks=args.meta_batch_size)
+        with open('./logs/{0}/task_list_eval.pkl'.format(args.output_folder), 'wb') as pf:
+            pickle.dump(all_tasks, pf)
+
+        print("evaluating...".format(batch))
+        all_rewards = []
+        for task in tasks:
+            print(task["position"])
+            episodes = sampler.sample(policy, task, tree=tree)
+        # print("training...".format(batch))
+
+
+            # tr = [ep.rewards for ep in episodes]
+            # tr = np.mean([torch.mean(torch.sum(rewards, dim=0)).item() for rewards in tr])
+            all_rewards.append(total_rewards(episodes.rewards))
+
+        reward_list.append(np.mean(all_rewards))
+
+
+
+    with open('./logs/{0}/reward_list_eval.pkl'.format(args.output_folder), 'wb') as pf:
+        pickle.dump(reward_list, pf)
+
+    print(reward_list)
+
+
 if __name__ == '__main__':
     import argparse
     import os
@@ -267,6 +356,8 @@ if __name__ == '__main__':
         help='number of workers for trajectories sampling')
     parser.add_argument('--device', type=str, default='cpu',
         help='set the device (cpu or cuda)')
+    parser.add_argument('--do-eval', action='store_true',
+                        help='do eval')
 
     parser.add_argument('--do-eval', action='store_true',
                         help='do eval')
@@ -280,7 +371,7 @@ if __name__ == '__main__':
         os.makedirs('./saves')
     # Device
     args.device = torch.device(args.device
-        if torch.cuda.is_available() else 'cpu')
+                               if torch.cuda.is_available() else 'cpu')
     # Slurm
     if 'SLURM_JOB_ID' in os.environ:
         args.output_folder += '-{0}'.format(os.environ['SLURM_JOB_ID'])

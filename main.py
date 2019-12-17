@@ -134,7 +134,7 @@ def eval(args):
 
     if continuous_actions:
         policy = NormalMLPPolicy(
-            int(np.prod(sampler.envs.observation_space.shape)),
+            int(np.prod(sampler.envs.observation_space.shape) + args.tree_hidden_layer),
             int(np.prod(sampler.envs.action_space.shape)),
             hidden_sizes=(args.hidden_size,) * args.num_layers)
     else:

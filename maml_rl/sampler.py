@@ -32,7 +32,7 @@ class BatchSampler(object):
         dones = [False]
         while (not all(dones)) or (not self.queue.empty()):
             with torch.no_grad():
-                input = torch.from_numpy(observations).to(device=device)
+                input = torch.from_numpy(observations).float().to(device=device)
 
                 if self.env_name == 'AntPos-v0':
                     _, embedding = tree.forward(torch.from_numpy(task["position"]).to(device=device))

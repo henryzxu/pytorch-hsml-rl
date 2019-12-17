@@ -35,7 +35,7 @@ class BatchSampler(object):
                 input = torch.from_numpy(observations).float().to(device=device)
 
                 if self.env_name == 'AntPos-v0':
-                    _, embedding = tree.forward(torch.from_numpy(task["position"]).to(device=device))
+                    _, embedding = tree.forward(torch.from_numpy(task["position"]).float().to(device=device))
                 if self.env_name == 'AntVel-v1':
                     _, embedding = tree.forward(torch.from_numpy(np.array([task["velocity"]])).float().to(device=device))
 

@@ -71,6 +71,15 @@ def main(args):
     # torch.autograd.set_detect_anomaly(True)
     for batch in range(args.num_batches):
         print("starting iteration {}".format(batch))
+
+        load_dir = os.path.join(save_folder, 'policy-{0}.pt'.format(batch))
+        if os.path.exists(load_dir):
+            policy.load_state_dict(torch.load(load_dir))
+            print("loaded iteration {}".format(batch))
+            continue
+
+
+
         tasks = []
         for _ in range(args.meta_batch_size):
             if args.env_name == 'AntPos-v0':
